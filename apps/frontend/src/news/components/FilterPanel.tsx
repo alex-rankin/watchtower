@@ -244,8 +244,6 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
                       | "left"
                       | "center"
                       | "right"
-                      | "finance"
-                      | "other",
                   )
                     ? "default"
                     : "outline"

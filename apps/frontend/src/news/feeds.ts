@@ -3,14 +3,6 @@ import type { FeedDefinition } from "./types";
 export const feeds: FeedDefinition[] = [
   // Major Financial News Outlets
   {
-    id: "reuters-finance",
-    name: "Reuters Finance",
-    url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best",
-    leaning: "center",
-    industries: ["finance", "markets"],
-    regions: ["US", "EU", "ASIA"],
-  },
-  {
     id: "reuters-news-releases",
     name: "Thomson Reuters News Releases",
     url: "https://ir.thomsonreuters.com/rss/news-releases.xml?items=15",
@@ -37,15 +29,23 @@ export const feeds: FeedDefinition[] = [
   {
     id: "wsj-markets",
     name: "Wall Street Journal Markets",
-    url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    url: "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain",
     leaning: "center",
     industries: ["finance", "markets"],
     regions: ["US"],
   },
   {
+    id: "wsj-world",
+    name: "Wall Street Journal World",
+    url: "https://feeds.content.dowjones.io/public/rss/RSSWorldNews",
+    leaning: "center",
+    industries: ["finance", "markets", "world"],
+    regions: ["US"],
+  },
+  {
     id: "wsj-business",
     name: "Wall Street Journal Business",
-    url: "https://feeds.a.dj.com/rss/RSSBusinessNews.xml",
+    url: "https://feeds.content.dowjones.io/public/rss/socialeconomyfeed",
     leaning: "center",
     industries: ["finance", "markets", "business"],
     regions: ["US"],
@@ -53,7 +53,7 @@ export const feeds: FeedDefinition[] = [
   {
     id: "cnbc-top",
     name: "CNBC Top News",
-    url: "https://feeds.nbcnews.com/nbcnews/public/topstories",
+    url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
     leaning: "left",
     industries: ["finance", "tech", "markets"],
     regions: ["US"],
@@ -77,7 +77,7 @@ export const feeds: FeedDefinition[] = [
   {
     id: "marketwatch-top",
     name: "MarketWatch Top Stories",
-    url: "https://www.marketwatch.com/rss/topstories",
+    url: "https://feeds.content.dowjones.io/public/rss/mw_topstories",
     leaning: "center",
     industries: ["finance", "markets"],
     regions: ["US"],
@@ -85,7 +85,7 @@ export const feeds: FeedDefinition[] = [
   {
     id: "marketwatch-breaking",
     name: "MarketWatch Breaking News",
-    url: "https://www.marketwatch.com/rss/breaking-news",
+    url: "https://feeds.content.dowjones.io/public/rss/mw_bulletins",
     leaning: "center",
     industries: ["finance", "markets"],
     regions: ["US"],
@@ -134,24 +134,8 @@ export const feeds: FeedDefinition[] = [
     industries: ["tech"],
     regions: ["AU"],
   },
-  {
-    id: "reuters-tech",
-    name: "Reuters Technology",
-    url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best&best-topics=technology",
-    leaning: "center",
-    industries: ["tech"],
-    regions: ["US", "EU", "ASIA"],
-  },
 
   // Additional Financial Sources
-  {
-    id: "yahoo-finance",
-    name: "Yahoo Finance",
-    url: "https://feeds.finance.yahoo.com/rss/2.0/headline",
-    leaning: "center",
-    industries: ["finance", "markets"],
-    regions: ["US"],
-  },
   {
     id: "investing-com",
     name: "Investing.com Top News",
@@ -159,5 +143,71 @@ export const feeds: FeedDefinition[] = [
     leaning: "center",
     industries: ["finance", "markets"],
     regions: ["US", "EU", "ASIA"],
+  },
+
+  // Major News Outlets
+  {
+    id: "nytimes-homepage",
+    name: "New York Times Top Stories",
+    url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+    leaning: "left",
+    industries: ["finance", "markets", "tech", "politics", "world"],
+    regions: ["US", "WORLD"],
+  },
+  {
+    id: "foxnews-latest",
+    name: "Fox News Latest",
+    url: "http://feeds.foxnews.com/foxnews/latest",
+    leaning: "right",
+    industries: ["finance", "markets", "tech", "politics", "world"],
+    regions: ["US", "WORLD"],
+  },
+  {
+    id: "washingtonpost-world",
+    name: "Washington Post World",
+    url: "https://feeds.washingtonpost.com/rss/world",
+    leaning: "left",
+    industries: ["politics", "world"],
+    regions: ["US", "WORLD"],
+  },
+  {
+    id: "washingtonpost-business",
+    name: "Washington Post Business",
+    url: "https://feeds.washingtonpost.com/rss/business",
+    leaning: "left",
+    industries: ["finance", "markets", "business"],
+    regions: ["US"],
+  },
+  {
+    id: "washingtonpost-technology",
+    name: "Washington Post Technology",
+    url: "https://feeds.washingtonpost.com/rss/business/technology",
+    leaning: "left",
+    industries: ["tech"],
+    regions: ["US"],
+  },
+  {
+    id: "rt",
+    name: "RT",
+    url: "https://www.rt.com/rss/",
+    leaning: "center",
+    industries: ["politics", "world"],
+    regions: ["WORLD"],
+  },
+  {
+    id: "nypost",
+    name: "New York Post",
+    url: "https://nypost.com/feed/",
+    leaning: "right",
+    industries: ["finance", "markets", "tech", "politics", "world"],
+    regions: ["US", "WORLD"],
+  },
+  {
+    id: "economist",
+    name: "The Economist",
+    url: "https://www.economist.com/rss",
+    leaning: "center",
+    industries: ["finance", "markets", "tech", "politics", "world"],
+    regions: ["US", "EU", "UK", "WORLD"],
   },
 ];
