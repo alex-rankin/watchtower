@@ -1,7 +1,7 @@
 export interface NewsArticle {
   title: string;
   url: string;
-  publishedAt: string; // ISO string
+  publishedAt: string;
   author: string | null;
   summary: string | null;
   guid: string | null;

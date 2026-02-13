@@ -2,10 +2,13 @@
 @import "tailwindcss";
 
 @theme {
-  --font-body: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-display: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
+  /* Custom font families (migrated from tailwind.config.ts) */
+  --font-display: "Fraunces", serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  
+  /* Custom shadow (migrated from tailwind.config.ts) */
+  --shadow-glow: 0 0 0 1px hsl(var(--border) / 0.6), 0 10px 30px -12px hsl(var(--foreground) / 0.25);
+  
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
