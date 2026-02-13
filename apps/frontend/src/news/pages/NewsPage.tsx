@@ -23,7 +23,7 @@ export function NewsPage() {
           <FilterPanel filters={filters} onFiltersChange={setFilters} />
         </aside>
 
-        <main>
+        <main className="flex flex-col" style={{ maxHeight: "calc(100vh - 200px)" }}>
           <NewsList filters={filters} />
         </main>
       </div>

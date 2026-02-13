@@ -1,4 +1,4 @@
-export type Leaning = "left" | "center" | "right" | "finance" | "other";
+export type Leaning = "left" | "center" | "right";
 
 export interface FeedDefinition {
   id: string;

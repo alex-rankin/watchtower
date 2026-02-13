@@ -1,5 +1,6 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { feeds } from "../feeds";
@@ -12,7 +13,7 @@ interface NewsListProps {
 }
 
 export function NewsList({ filters }: NewsListProps) {
-  const { articles, isLoading, isError, errors } = useFilteredNews(filters);
+  const { articles, isLoading, isError, errors, refetch } = useFilteredNews(filters);
 
   if (isLoading) {
     return (
@@ -54,20 +55,38 @@ export function NewsList({ filters }: NewsListProps) {
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-200px)]">
-      <div className="space-y-4 pr-4">
-        {articles.map((article) => {
-          const feed = feeds.find((f) => f.url === article.sourceUrl);
-          return (
-            <NewsItem
-              key={article.guid || article.url}
-              article={article}
-              feedLeaning={feed?.leaning}
-              industries={feed?.industries}
-            />
-          );
-        })}
+    <div className="flex flex-col h-full">
+      <div className="mb-4 flex items-center justify-between shrink-0">
+        <p className="text-sm text-muted-foreground">
+          {articles.length} {articles.length === 1 ? "article" : "articles"}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isLoading}
+        >
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+          />
+          Refresh
+        </Button>
       </div>
-    </ScrollArea>
+      <ScrollArea className="flex-1 overflow-auto">
+        <div className="space-y-4 pr-4">
+          {articles.map((article) => {
+            const feed = feeds.find((f) => f.url === article.sourceUrl);
+            return (
+              <NewsItem
+                key={article.guid || article.url}
+                article={article}
+                feedLeaning={feed?.leaning}
+                industries={feed?.industries}
+              />
+            );
+          })}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }

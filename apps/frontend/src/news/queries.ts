@@ -102,12 +102,18 @@ export function useAllNews() {
   const cachedArticles = loadCachedArticles();
   const articles = deduped.length > 0 ? deduped : cachedArticles;
 
+  // Create a refetch function that refetches all queries
+  const refetch = () => {
+    queries.forEach((query) => query.refetch());
+  };
+
   return {
     articles,
     isLoading,
     isError,
     errors,
     feeds,
+    refetch,
   };
 }
 
@@ -115,7 +121,7 @@ export function useAllNews() {
  * Filter and sort articles based on filters
  */
 export function useFilteredNews(filters: NewsFilters) {
-  const { articles, isLoading, isError, errors, feeds } = useAllNews();
+  const { articles, isLoading, isError, errors, feeds, refetch } = useAllNews();
 
   const filtered = useMemo(() => {
     let result = [...articles];
@@ -171,5 +177,6 @@ export function useFilteredNews(filters: NewsFilters) {
     isLoading,
     isError,
     errors,
+    refetch,
   };
 }
