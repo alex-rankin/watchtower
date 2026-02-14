@@ -19,6 +19,8 @@ export const MARKET_TICKERS: { id: string; dataSymbol: string }[] = [
   { id: "usdjpy", dataSymbol: "USDJPY=X" },
   { id: "audusd", dataSymbol: "AUDUSD=X" },
   { id: "usdcad", dataSymbol: "USDCAD=X" },
+  { id: "nzdaud", dataSymbol: "NZDAUD=X" },
+  { id: "nzdusd", dataSymbol: "NZDUSD=X" },
   { id: "btcusd", dataSymbol: "BTC-USD" },
   { id: "ethusd", dataSymbol: "ETH-USD" },
   { id: "btcusdt", dataSymbol: "BTC-USD" },

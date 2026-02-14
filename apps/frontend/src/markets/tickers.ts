@@ -52,6 +52,8 @@ export const TICKER_CATEGORIES: TickerCategory[] = [
       { id: "usdjpy", name: "USD/JPY", symbol: "FX:USDJPY", dataSymbol: "USDJPY=X" },
       { id: "audusd", name: "AUD/USD", symbol: "FX:AUDUSD", dataSymbol: "AUDUSD=X" },
       { id: "usdcad", name: "USD/CAD", symbol: "FX:USDCAD", dataSymbol: "USDCAD=X" },
+      { id: "nzdaud", name: "NZD/AUD", symbol: "FX:NZDAUD", dataSymbol: "NZDAUD=X" },
+      { id: "nzdusd", name: "NZD/USD", symbol: "FX:NZDUSD", dataSymbol: "NZDUSD=X" },
     ],
   },
   {

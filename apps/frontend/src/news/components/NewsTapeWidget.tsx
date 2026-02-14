@@ -17,7 +17,7 @@ export function NewsTapeWidget() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-xl">Latest News</CardTitle>
+        <CardTitle className="text-xl">Latest Global News</CardTitle>
         <Button variant="ghost" size="sm" asChild>
           <Link to="/news">
             View All <ArrowRight className="ml-2 h-4 w-4" />

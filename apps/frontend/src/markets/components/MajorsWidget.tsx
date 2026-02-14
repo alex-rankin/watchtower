@@ -26,9 +26,6 @@ export function MajorsWidget() {
     <Card>
       <CardHeader>
         <CardTitle className="text-xl">Majors</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Click a ticker to view the TradingView chart.
-        </p>
       </CardHeader>
       <CardContent>
         {isLoading ? (

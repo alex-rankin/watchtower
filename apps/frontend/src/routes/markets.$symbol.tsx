@@ -2,10 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TradingViewWidget } from "@/markets/components/TradingViewWidget";
-import {
-  getTickerById,
-  getTradingViewChartUrl,
-} from "@/markets/tickers";
+import { getTickerById, getTradingViewChartUrl } from "@/markets/tickers";
 
 export const Route = createFileRoute("/markets/$symbol")({
   component: MarketSymbolPage,
@@ -17,7 +14,7 @@ function MarketSymbolPage() {
 
   if (!ticker) {
     return (
-      <div className="container mx-auto max-w-6xl px-4 py-10">
+      <div className="container mx-auto px-4 py-10">
         <p className="text-muted-foreground">Ticker not found.</p>
         <Link to="/" className="mt-4 inline-block text-primary hover:underline">
           Back to Dashboard
@@ -29,7 +26,7 @@ function MarketSymbolPage() {
   const chartUrl = getTradingViewChartUrl(ticker.symbol);
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-6 px-4 py-10">
+    <div className="container mx-auto space-y-6 px-4 py-10">
       <Link
         to="/"
         className="inline-block text-sm text-muted-foreground hover:text-foreground"
