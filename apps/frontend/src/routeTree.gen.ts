@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PnlRouteImport } from './routes/pnl'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MarketsSymbolRouteImport } from './routes/markets.$symbol'
 
 const PnlRoute = PnlRouteImport.update({
   id: '/pnl',
@@ -28,35 +29,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketsSymbolRoute = MarketsSymbolRouteImport.update({
+  id: '/markets/$symbol',
+  path: '/markets/$symbol',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/news': typeof NewsRoute
   '/pnl': typeof PnlRoute
+  '/markets/$symbol': typeof MarketsSymbolRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/news': typeof NewsRoute
   '/pnl': typeof PnlRoute
+  '/markets/$symbol': typeof MarketsSymbolRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/news': typeof NewsRoute
   '/pnl': typeof PnlRoute
+  '/markets/$symbol': typeof MarketsSymbolRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/news' | '/pnl'
+  fullPaths: '/' | '/news' | '/pnl' | '/markets/$symbol'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/news' | '/pnl'
-  id: '__root__' | '/' | '/news' | '/pnl'
+  to: '/' | '/news' | '/pnl' | '/markets/$symbol'
+  id: '__root__' | '/' | '/news' | '/pnl' | '/markets/$symbol'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   NewsRoute: typeof NewsRoute
   PnlRoute: typeof PnlRoute
+  MarketsSymbolRoute: typeof MarketsSymbolRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/markets/$symbol': {
+      id: '/markets/$symbol'
+      path: '/markets/$symbol'
+      fullPath: '/markets/$symbol'
+      preLoaderRoute: typeof MarketsSymbolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   NewsRoute: NewsRoute,
   PnlRoute: PnlRoute,
+  MarketsSymbolRoute: MarketsSymbolRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

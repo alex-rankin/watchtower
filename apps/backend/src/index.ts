@@ -1,6 +1,7 @@
 import express from "express";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import marketsRouter from "./routes/markets.js";
 import newsRouter from "./routes/news.js";
 import healthRouter from "./routes/health.js";
 
@@ -14,6 +15,7 @@ const isProduction = process.env.NODE_ENV === "production";
 app.use(express.json());
 
 // API routes
+app.use("/api/markets", marketsRouter);
 app.use("/api/news", newsRouter);
 app.use("/api/health", healthRouter);
 

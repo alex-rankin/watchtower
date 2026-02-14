@@ -67,3 +67,36 @@
     margin: 0;
   }
 }
+
+/* TradingView embed: chart fills widget container (script is inside __widget) */
+.tradingview-widget-container__widget {
+  display: block;
+  position: relative;
+}
+.tradingview-widget-container__widget > div,
+.tradingview-widget-container__widget iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Ticker carousel: scrollbar below cards, padded and always visible (a11y / no mouse) */
+.ticker-carousel .swiper-scrollbar {
+  position: relative;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 10px;
+  margin-top: 12px;
+  background: hsl(var(--muted));
+  border-radius: 5px;
+}
+.ticker-carousel .swiper-scrollbar-drag {
+  background: hsl(var(--border));
+  border-radius: 5px;
+}
+.ticker-carousel .swiper-scrollbar-drag:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
