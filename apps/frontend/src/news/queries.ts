@@ -108,17 +108,19 @@ export function useAllNews() {
     }
   }
 
-  // Deduplicate
+  // Deduplicate then sort by newest first (so "latest" is meaningful)
   const deduped = deduplicateArticles(allArticles);
+  const articlesSorted = sortArticles(deduped, "newest");
 
   // Update cache when we have new data
-  if (deduped.length > 0) {
-    saveCachedArticles(deduped);
+  if (articlesSorted.length > 0) {
+    saveCachedArticles(articlesSorted);
   }
 
   // Load cached articles as fallback
   const cachedArticles = loadCachedArticles();
-  const articles = deduped.length > 0 ? deduped : cachedArticles;
+  const articles =
+    articlesSorted.length > 0 ? articlesSorted : cachedArticles;
 
   // Create a refetch function that refetches all queries
   const refetch = () => {
