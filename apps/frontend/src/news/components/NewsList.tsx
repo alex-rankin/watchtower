@@ -13,11 +13,12 @@ interface NewsListProps {
 }
 
 export function NewsList({ filters }: NewsListProps) {
-  const { articles, isLoading, isError, errors, refetch } = useFilteredNews(filters);
+  const { articles, isLoading, isError, errors, refetch } =
+    useFilteredNews(filters);
 
   if (isLoading) {
     return (
-        <div className="space-y-4">
+      <div className="space-y-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={`skeleton-${i}`} className="h-32 w-full" />
         ))}
@@ -73,7 +74,7 @@ export function NewsList({ filters }: NewsListProps) {
         </Button>
       </div>
       <ScrollArea className="flex-1 overflow-auto">
-        <div className="space-y-4 pr-4">
+        <div className="space-y-4">
           {articles.map((article) => {
             const feed = getFeedForArticle(article, feeds);
             return (
