@@ -1,0 +1,133 @@
+name: Deploy to Centurion
+
+on:
+  push:
+    branches: [main]
+
+env:
+  DEPLOY_PATH: /var/www/watchtower
+  APP_PORT: 3001
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build (frontend + backend)
+        run: yarn build
+        env:
+          NODE_ENV: production
+
+      - name: Add Droplet to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H ${{ secrets.DROPLET_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Create deployment directory and backup
+        run: |
+          ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} << EOF
+            set -euo pipefail
+            cd ${{ env.DEPLOY_PATH }}
+
+            mkdir -p .deploy-backup
+            TS=\$(date +%Y%m%d-%H%M%S)
+
+            if [ -d "apps/frontend/dist" ]; then
+              cp -r apps/frontend/dist .deploy-backup/frontend-dist-\$TS || true
+              echo "✅ Backed up apps/frontend/dist"
+            fi
+            if [ -d "apps/backend/dist" ]; then
+              cp -r apps/backend/dist .deploy-backup/backend-dist-\$TS || true
+              echo "✅ Backed up apps/backend/dist"
+            fi
+          EOF
+
+      - name: Sync repo to droplet
+        run: |
+          set -euxo pipefail
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='node_modules/' \
+            --exclude='.deploy-backup/' \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            --exclude='.env.*.local' \
+            -e "ssh" \
+            ./ "${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/"
+
+      - name: Install production deps and restart
+        run: |
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} "DEPLOY_PATH='${{ env.DEPLOY_PATH }}' APP_PORT='${{ env.APP_PORT }}' bash -s" << 'REMOTE'
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+
+            echo "=== INSTALL PRODUCTION DEPS ==="
+            yarn install --frozen-lockfile --production
+
+            echo "=== RESTART APPLICATION ==="
+            pm2 reload watchtower --update-env 2>/dev/null || \
+            pm2 start yarn --name watchtower -- start \
+              --cwd "$DEPLOY_PATH" \
+              --interpreter bash
+
+            pm2 save
+
+            echo "=== HEALTH CHECK ==="
+            sleep 5
+            if curl -sf "http://localhost:${APP_PORT}/api/health" > /dev/null; then
+              echo "✅ Health check passed"
+
+              # Cleanup old backups (keep last 3 frontend + 3 backend)
+              if [ -d ".deploy-backup" ]; then
+                (cd .deploy-backup && ls -dt frontend-dist-* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true)
+                (cd .deploy-backup && ls -dt backend-dist-* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true)
+                echo "🧹 Cleaned up old backups"
+              fi
+            else
+              echo "❌ Health check failed - rolling back..."
+
+              LATEST_FRONTEND=$(ls -dt .deploy-backup/frontend-dist-* 2>/dev/null | head -1)
+              LATEST_BACKEND=$(ls -dt .deploy-backup/backend-dist-* 2>/dev/null | head -1)
+              if [ -n "$LATEST_FRONTEND" ] && [ -d "$LATEST_FRONTEND" ]; then
+                rm -rf apps/frontend/dist && cp -r "$LATEST_FRONTEND" apps/frontend/dist
+                echo "🔄 Restored frontend from backup"
+              fi
+              if [ -n "$LATEST_BACKEND" ] && [ -d "$LATEST_BACKEND" ]; then
+                rm -rf apps/backend/dist && cp -r "$LATEST_BACKEND" apps/backend/dist
+                echo "🔄 Restored backend from backup"
+              fi
+              pm2 reload watchtower --update-env
+              echo "✅ Rollback complete"
+              exit 1
+            fi
+
+            pm2 status
+          REMOTE
+
+      - name: Deployment notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful"
+          else
+            echo "❌ Deployment failed"
+          fi
