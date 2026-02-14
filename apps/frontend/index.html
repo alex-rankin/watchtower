@@ -7,6 +7,15 @@
     <title>vite-project</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var t = localStorage.getItem("watchtower-theme");
+        var theme = t === "light" || t === "dark" ? t : "dark";
+        var el = document.documentElement;
+        el.classList.remove("light", "dark");
+        el.classList.add(theme);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

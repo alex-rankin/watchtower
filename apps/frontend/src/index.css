@@ -30,7 +30,9 @@
   --color-ring: hsl(var(--ring));
 }
 
-:root {
+/* Dark theme (default) */
+:root,
+.dark {
   --background: 220 22% 6%;
   --foreground: 210 20% 92%;
   --card: 220 20% 9%;
@@ -51,6 +53,29 @@
   --input: 220 16% 22%;
   --ring: 140 70% 52%;
   --radius: 0.5rem;
+}
+
+/* Light theme */
+.light {
+  --background: 210 20% 98%;
+  --foreground: 220 20% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 20% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 12%;
+  --primary: 142 71% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 94%;
+  --secondary-foreground: 220 20% 12%;
+  --muted: 210 20% 92%;
+  --muted-foreground: 210 12% 40%;
+  --accent: 190 70% 42%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 14% 88%;
+  --input: 220 14% 88%;
+  --ring: 142 71% 45%;
 }
 
 @layer base {
