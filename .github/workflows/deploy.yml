@@ -89,20 +89,26 @@ jobs:
 
             pm2 save
 
-            echo "=== HEALTH CHECK ==="
-            sleep 5
-            if curl -sf "http://localhost:${APP_PORT}/api/health" > /dev/null; then
-              echo "✅ Health check passed"
+            echo "=== HEALTH CHECK (retry up to 60s) ==="
+            HEALTH_OK=0
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              sleep 5
+              if curl -sf "http://127.0.0.1:${APP_PORT}/api/health" > /dev/null; then
+                echo "✅ Health check passed"
+                HEALTH_OK=1
+                break
+              fi
+              echo "  Attempt $i/12 failed, retrying..."
+            done
 
-              # Cleanup old backups (keep last 3 frontend + 3 backend)
+            if [ "$HEALTH_OK" -eq 1 ]; then
               if [ -d ".deploy-backup" ]; then
                 (cd .deploy-backup && ls -dt frontend-dist-* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true)
                 (cd .deploy-backup && ls -dt backend-dist-* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true)
                 echo "🧹 Cleaned up old backups"
               fi
             else
-              echo "❌ Health check failed - rolling back..."
-
+              echo "❌ Health check failed after 60s - rolling back..."
               LATEST_FRONTEND=$(ls -dt .deploy-backup/frontend-dist-* 2>/dev/null | head -1)
               LATEST_BACKEND=$(ls -dt .deploy-backup/backend-dist-* 2>/dev/null | head -1)
               if [ -n "$LATEST_FRONTEND" ] && [ -d "$LATEST_FRONTEND" ]; then
