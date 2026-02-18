@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Info, RefreshCcw } from "lucide-react";
+import { AlertTriangle, ChevronDown, Info, RefreshCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Resolver } from "react-hook-form";
 import { useForm, useWatch } from "react-hook-form";
@@ -45,6 +45,7 @@ const STORAGE_KEY = "pnl.preferences.v1";
 const FX_STORAGE_KEY = "pnl.fx.usd-nzd.v1";
 
 type Currency = "USD" | "NZD";
+const AUTO_SIZE_EPSILON = 1e-8;
 
 const formSchema = z
   .object({
@@ -159,12 +160,15 @@ export function PnlCalculator() {
   const stored = readStoredPreferences();
   const [currency, setCurrency] = useState<Currency>(stored.currency ?? "USD");
   const [cachedFx, setCachedFx] = useState<FxRate | null>(() => readStoredFx());
+  const [feesPanelOpen, setFeesPanelOpen] = useState(false);
   const initialSizeMode: SizeMode =
     stored.sizeMode === "units" ? "notional" : (stored.sizeMode ?? "notional");
 
   const form = useForm<FormValues>({
     // Zod v4: @hookform/resolvers typings target Zod 3; runtime works with Zod 4
-    resolver: zodResolver(formSchema as unknown as Parameters<typeof zodResolver>[0]) as unknown as Resolver<FormValues>,
+    resolver: zodResolver(
+      formSchema as unknown as Parameters<typeof zodResolver>[0],
+    ) as unknown as Resolver<FormValues>,
     mode: "onChange",
     defaultValues: {
       direction: stored.direction ?? "long",
@@ -290,42 +294,116 @@ export function PnlCalculator() {
     return formatPrice(value * fxRate, currency);
   };
 
-  const riskSuggestion = useMemo(() => {
+  const riskSizingGuide = useMemo(() => {
     if (!summary?.riskPerUnit) {
       return null;
     }
     if (
-      !watched.accountBalance ||
+      watched.accountBalance === undefined ||
       watched.riskPercent === undefined ||
       watched.entry == null
     ) {
       return null;
     }
-    const riskAmount = (watched.accountBalance * watched.riskPercent) / 100;
-    if (riskAmount <= 0) {
+    if (watched.accountBalance <= 0 || watched.riskPercent <= 0) {
       return null;
     }
-    const suggestedUnits = riskAmount / summary.riskPerUnit;
-    if (!Number.isFinite(suggestedUnits)) {
+
+    const targetRiskUsd = (watched.accountBalance * watched.riskPercent) / 100;
+    const feeFlat = Math.max(watched.feeFlat ?? 0, 0);
+    const feePercent = Math.max(watched.feePercent ?? 0, 0);
+    const feePercentDecimal = feePercent / 100;
+    const stopDistanceUsd = summary.riskPerUnit;
+    const riskPerUnitWithFees =
+      stopDistanceUsd + watched.entry * feePercentDecimal;
+
+    if (riskPerUnitWithFees <= 0) {
       return null;
     }
+
+    const budgetAfterFlatFees = targetRiskUsd - feeFlat;
+    if (budgetAfterFlatFees <= 0) {
+      return {
+        targetRiskUsd,
+        stopDistanceUsd,
+        feeFlat,
+        feePercent,
+        suggestedUnits: null,
+        suggestedNotional: null,
+        projectedRiskUsd: null,
+      };
+    }
+
+    const suggestedUnits = budgetAfterFlatFees / riskPerUnitWithFees;
+    if (!Number.isFinite(suggestedUnits) || suggestedUnits <= 0) {
+      return null;
+    }
+
     const suggestedNotional = suggestedUnits * watched.entry;
+    const projectedRiskUsd =
+      suggestedUnits * stopDistanceUsd +
+      feeFlat +
+      suggestedNotional * feePercentDecimal;
+
     return {
-      riskAmount,
+      targetRiskUsd,
+      stopDistanceUsd,
+      feeFlat,
+      feePercent,
       suggestedUnits,
       suggestedNotional,
+      projectedRiskUsd,
     };
   }, [
     summary?.riskPerUnit,
     watched.accountBalance,
     watched.riskPercent,
     watched.entry,
+    watched.feeFlat,
+    watched.feePercent,
+  ]);
+
+  useEffect(() => {
+    if (
+      !riskSizingGuide?.suggestedUnits ||
+      !riskSizingGuide.suggestedNotional
+    ) {
+      return;
+    }
+
+    if (watched.sizeMode === "units") {
+      const currentUnits = watched.units;
+      const nextUnits = riskSizingGuide.suggestedUnits;
+      if (
+        currentUnits === undefined ||
+        Math.abs(currentUnits - nextUnits) > AUTO_SIZE_EPSILON
+      ) {
+        form.setValue("units", nextUnits, { shouldValidate: true });
+      }
+      return;
+    }
+
+    const currentNotional = watched.notional;
+    const nextNotional = riskSizingGuide.suggestedNotional;
+    if (
+      currentNotional === undefined ||
+      Math.abs(currentNotional - nextNotional) > AUTO_SIZE_EPSILON
+    ) {
+      form.setValue("notional", nextNotional, { shouldValidate: true });
+    }
+  }, [
+    form,
+    riskSizingGuide?.suggestedNotional,
+    riskSizingGuide?.suggestedUnits,
+    watched.notional,
+    watched.sizeMode,
+    watched.units,
   ]);
 
   return (
     <TooltipProvider>
       <Card className="rounded-lg border border-border/70 bg-card shadow-none">
-        <CardHeader className="space-y-3 border-b border-border/70">
+        <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <CardTitle>Trading P&amp;L Calculator</CardTitle>
@@ -384,7 +462,7 @@ export function PnlCalculator() {
         </CardHeader>
         <CardContent className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
-            <div className="grid gap-4 rounded-md border border-border/70 bg-background p-4">
+            <div className="grid rounded-md border border-border/70 bg-background p-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium">Trade direction</p>
@@ -415,80 +493,6 @@ export function PnlCalculator() {
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-              </div>
-            </div>
-
-            <div className="grid gap-4 rounded-md border border-border/70 bg-background p-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium">Position size mode</p>
-                  <p className="text-xs text-muted-foreground">
-                    Switch between units and notional size inputs.
-                  </p>
-                </div>
-                <Tabs
-                  value={watched.sizeMode}
-                  onValueChange={(value) =>
-                    form.setValue("sizeMode", value as SizeMode, {
-                      shouldValidate: true,
-                    })
-                  }
-                >
-                  <TabsList>
-                    <TabsTrigger value="notional">Notional</TabsTrigger>
-                    <TabsTrigger value="units">Units</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                {watched.sizeMode === "units" ? (
-                  <Field
-                    label="Position size (units)"
-                    helper="Shares, contracts, or coins."
-                    error={form.formState.errors.units?.message}
-                  >
-                    <Input
-                      type="number"
-                      step="any"
-                      {...form.register("units", { setValueAs: parseNumber })}
-                    />
-                  </Field>
-                ) : (
-                  <Field
-                    label="Notional size (USD)"
-                    helper="Total capital allocated to the trade."
-                    error={form.formState.errors.notional?.message}
-                  >
-                    <Input
-                      type="number"
-                      step="any"
-                      {...form.register("notional", {
-                        setValueAs: parseNumber,
-                      })}
-                    />
-                  </Field>
-                )}
-                <Field label="Risk preset" helper="Optional % of account risk.">
-                  <Select
-                    value={riskPresetValue}
-                    onValueChange={(value) =>
-                      form.setValue(
-                        "riskPercent",
-                        value ? Number(value) : undefined,
-                      )
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a preset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0.5">0.5% risk</SelectItem>
-                      <SelectItem value="1">1% risk</SelectItem>
-                      <SelectItem value="2">2% risk</SelectItem>
-                      <SelectItem value="3">3% risk</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
               </div>
             </div>
 
@@ -533,69 +537,215 @@ export function PnlCalculator() {
             </div>
 
             <div className="grid gap-4 rounded-md border border-border/70 bg-background p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Fees &amp; account risk</p>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 text-xs text-muted-foreground"
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                      Net P&amp;L includes fees
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Fees are applied to both stop and take-profit outcomes.
-                  </TooltipContent>
-                </Tooltip>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Position size mode</p>
+                  <p className="text-xs text-muted-foreground">
+                    Switch between units and notional size inputs.
+                  </p>
+                </div>
+                <Tabs
+                  value={watched.sizeMode}
+                  onValueChange={(value) =>
+                    form.setValue("sizeMode", value as SizeMode, {
+                      shouldValidate: true,
+                    })
+                  }
+                >
+                  <TabsList>
+                    <TabsTrigger value="notional">Notional</TabsTrigger>
+                    <TabsTrigger value="units">Units</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Fees (flat)" helper="Add a flat USD amount.">
-                  <Input
-                    type="number"
-                    step="any"
-                    {...form.register("feeFlat", { setValueAs: parseNumber })}
-                  />
-                </Field>
-                <Field label="Fees (%)" helper="Percent of notional size.">
-                  <Input
-                    type="number"
-                    step="any"
-                    {...form.register("feePercent", {
-                      setValueAs: parseNumber,
-                    })}
-                  />
-                </Field>
-                <Field
-                  label="Account balance"
-                  helper="Optional sizing reference."
-                >
-                  <Input
-                    type="number"
-                    step="any"
-                    {...form.register("accountBalance", {
-                      setValueAs: parseNumber,
-                    })}
-                  />
-                </Field>
-                <Field
-                  label="Risk % of account"
-                  helper="Used for sizing suggestion."
-                >
-                  <Input
-                    type="number"
-                    step="any"
-                    {...form.register("riskPercent", {
-                      setValueAs: parseNumber,
-                    })}
-                  />
+                {watched.sizeMode === "units" ? (
+                  <Field
+                    label="Position size (units)"
+                    helper="Shares, contracts, or coins."
+                    error={form.formState.errors.units?.message}
+                  >
+                    <Input
+                      type="number"
+                      step="any"
+                      {...form.register("units", { setValueAs: parseNumber })}
+                    />
+                  </Field>
+                ) : (
+                  <Field
+                    label="Size (USD)"
+                    helper="Total capital allocated to the trade."
+                    error={form.formState.errors.notional?.message}
+                  >
+                    <Input
+                      type="number"
+                      step="any"
+                      {...form.register("notional", {
+                        setValueAs: parseNumber,
+                      })}
+                    />
+                  </Field>
+                )}
+                <Field label="Risk preset" helper="Optional % of account risk.">
+                  <Select
+                    value={riskPresetValue}
+                    onValueChange={(value) =>
+                      form.setValue(
+                        "riskPercent",
+                        value ? Number(value) : undefined,
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a preset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0.5">0.5% risk</SelectItem>
+                      <SelectItem value="1">1% risk</SelectItem>
+                      <SelectItem value="2">2% risk</SelectItem>
+                      <SelectItem value="3">3% risk</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </Field>
               </div>
+            </div>
+
+            <div className="grid gap-4 rounded-md border border-border/70 bg-background p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">Fees &amp; account risk</p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 text-xs text-muted-foreground"
+                      >
+                        Net P&amp;L includes fees
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Fees are applied to both stop and take-profit outcomes.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setFeesPanelOpen((open) => !open)}
+                  aria-expanded={feesPanelOpen}
+                  aria-controls="fees-account-panel"
+                >
+                  {feesPanelOpen ? "Hide" : "Show"}
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${feesPanelOpen ? "rotate-180" : ""}`}
+                  />
+                </Button>
+              </div>
+              {feesPanelOpen ? (
+                <div id="fees-account-panel" className="mt-3">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Fees (flat)" helper="Add a flat USD amount.">
+                      <Input
+                        type="number"
+                        step="any"
+                        {...form.register("feeFlat", {
+                          setValueAs: parseNumber,
+                        })}
+                      />
+                    </Field>
+                    <Field label="Fees (%)" helper="Percent of notional size.">
+                      <Input
+                        type="number"
+                        step="any"
+                        {...form.register("feePercent", {
+                          setValueAs: parseNumber,
+                        })}
+                      />
+                    </Field>
+                    <Field
+                      label="Account balance"
+                      helper="Optional sizing reference."
+                    >
+                      <Input
+                        type="number"
+                        step="any"
+                        {...form.register("accountBalance", {
+                          setValueAs: parseNumber,
+                        })}
+                      />
+                    </Field>
+                    <Field
+                      label="Risk % of account"
+                      helper="Used for sizing suggestion."
+                    >
+                      <Input
+                        type="number"
+                        step="any"
+                        {...form.register("riskPercent", {
+                          setValueAs: parseNumber,
+                        })}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
 
           <div className="space-y-6">
+            {riskSizingGuide ? (
+              <div className="grid gap-3 rounded-md border border-border/70 bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium">Risk budget</p>
+                  <span className="text-xs text-muted-foreground">
+                    Auto-sized from account risk
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <ResultItem
+                    label="Target max loss"
+                    value={displayMoney(riskSizingGuide.targetRiskUsd)}
+                  />
+                  <ResultItem
+                    label="Estimated stop loss"
+                    value={
+                      riskSizingGuide.projectedRiskUsd
+                        ? displayMoney(riskSizingGuide.projectedRiskUsd)
+                        : "—"
+                    }
+                  />
+                  <ResultItem
+                    label="Delta vs target"
+                    value={
+                      riskSizingGuide.projectedRiskUsd
+                        ? displayMoney(
+                            riskSizingGuide.projectedRiskUsd -
+                              riskSizingGuide.targetRiskUsd,
+                          )
+                        : "—"
+                    }
+                  />
+                  <ResultItem
+                    label="Auto size"
+                    value={
+                      riskSizingGuide.suggestedNotional
+                        ? `${displayMoney(riskSizingGuide.suggestedNotional)} (${formatNumber(riskSizingGuide.suggestedUnits ?? 0, 4)} units)`
+                        : "—"
+                    }
+                  />
+                </div>
+                {riskSizingGuide.suggestedUnits &&
+                riskSizingGuide.suggestedNotional ? null : (
+                  <p className="text-xs text-amber-600">
+                    Flat fees exceed your risk budget. Increase risk % or lower
+                    flat fees.
+                  </p>
+                )}
+              </div>
+            ) : null}
             <div className="grid gap-4 rounded-md border border-border/70 bg-background p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Results</p>
@@ -648,19 +798,6 @@ export function PnlCalculator() {
                 </p>
               )}
             </div>
-
-            {riskSuggestion ? (
-              <Alert>
-                <AlertTitle>Position sizing suggestion</AlertTitle>
-                <AlertDescription>
-                  Risking {displayMoney(riskSuggestion.riskAmount)} yields about{" "}
-                  {watched.sizeMode === "notional"
-                    ? `${displayMoney(riskSuggestion.suggestedNotional)} notional`
-                    : `${formatNumber(riskSuggestion.suggestedUnits, 4)} units`}
-                  .
-                </AlertDescription>
-              </Alert>
-            ) : null}
 
             {warnings.length ? (
               <Alert variant="destructive">
